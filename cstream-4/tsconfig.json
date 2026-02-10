@@ -1,0 +1,26 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "module": "ESNext",
+        "moduleResolution": "bundler",
+        "jsx": "react-jsx",
+        "allowJs": true,
+        "skipLibCheck": true,
+        "esModuleInterop": true,
+        "allowSyntheticDefaultImports": true,
+        "baseUrl": ".",
+        "paths": {
+            "@/*": [
+                "./project/src/*"
+            ]
+        }
+    },
+    "include": [
+        "project/src",
+        "api"
+    ],
+    "exclude": [
+        "node_modules",
+        "project/node_modules"
+    ]
+}
