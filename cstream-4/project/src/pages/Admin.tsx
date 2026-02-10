@@ -40,6 +40,8 @@ import { MonitoringTab } from '@/components/admin/MonitoringTab';
 import { RoleManagementDialog, getRoleConfig } from '@/components/admin/RoleManagementPanel';
 import { UserStatusDot, UserStatusBadge, LastSeenDisplay, OnlineUsersCounter } from '@/components/admin/UserStatusIndicator';
 
+import { ContactMessagesTab } from '@/components/admin/ContactMessagesTab';
+
 /* ============================ Types ============================ */
 type MediaType = 'movie' | 'tv' | 'anime';
 
@@ -1467,6 +1469,7 @@ const Admin = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
+        .range(0, 4999) // Increase limit to fetch all users
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -1478,6 +1481,10 @@ const Admin = () => {
       setLoadingUsers(false);
     }
   }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -1718,7 +1725,7 @@ const Admin = () => {
     try {
       const [readersRes, usersRes] = await Promise.all([
         supabase.from('readers').select('*', { count: 'exact' }).order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*', { count: 'exact' }).order('created_at', { ascending: false })
+        supabase.from('profiles').select('*', { count: 'exact' }).range(0, 4999).order('created_at', { ascending: false })
       ]);
 
       let usersTableData: any[] = [];
@@ -4229,264 +4236,7 @@ const Admin = () => {
         </TabsContent>
 
         <TabsContent value="messages" className="space-y-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Card className="p-4 border-l-4 border-l-yellow-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">En attente</p>
-                  <p className="text-2xl font-bold">{messageStats.byStatus.pending}</p>
-                </div>
-                <Clock className="w-5 h-5 text-yellow-500" />
-              </div>
-            </Card>
-            <Card className="p-4 border-l-4 border-l-blue-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Lus</p>
-                  <p className="text-2xl font-bold">{messageStats.byStatus.read}</p>
-                </div>
-                <Eye className="w-5 h-5 text-blue-500" />
-              </div>
-            </Card>
-            <Card className="p-4 border-l-4 border-l-green-500">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Répondus</p>
-                  <p className="text-2xl font-bold">{messageStats.byStatus.replied}</p>
-                </div>
-                <Check className="w-5 h-5 text-green-500" />
-              </div>
-            </Card>
-            <Card className="p-4 border-l-4 border-l-primary">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs text-muted-foreground">Total</p>
-                  <p className="text-2xl font-bold">{stats.totalMessages}</p>
-                </div>
-                <Mail className="w-5 h-5 text-primary" />
-              </div>
-            </Card>
-          </div>
-
-          <Card className="bg-card/50 border-white/5">
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Mail className="w-5 h-5" />
-                    Messages de contact
-                    {stats.pendingMessages > 0 && (
-                      <Badge variant="destructive" className="ml-2">
-                        {stats.pendingMessages} nouveau{stats.pendingMessages > 1 ? 'x' : ''}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription className="mt-1">
-                    Consultez et gérez les messages reçus via le formulaire de contact
-                  </CardDescription>
-                </div>
-                <Button variant="outline" onClick={() => fetchContactMessages()} disabled={loadingMessages} className="gap-2">
-                  {loadingMessages ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
-                  Actualiser
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex flex-col sm:flex-row gap-3">
-                <Select value={messageStatusFilter} onValueChange={setMessageStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Filtrer par statut" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tous les statuts</SelectItem>
-                    <SelectItem value="pending">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-3 h-3 text-yellow-500" />
-                        En attente ({messageStats.byStatus.pending})
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="read">
-                      <div className="flex items-center gap-2">
-                        <Eye className="w-3 h-3 text-blue-500" />
-                        Lu ({messageStats.byStatus.read})
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="replied">
-                      <div className="flex items-center gap-2">
-                        <Check className="w-3 h-3 text-green-500" />
-                        Répondu ({messageStats.byStatus.replied})
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                <Select value={messageCategoryFilter} onValueChange={setMessageCategoryFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Filtrer par catégorie" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Toutes les catégories</SelectItem>
-                    <SelectItem value="help">
-                      <div className="flex items-center gap-2">
-                        <HelpCircle className="w-3 h-3 text-blue-500" />
-                        Aide ({messageStats.byCategory.help})
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="bug">
-                      <div className="flex items-center gap-2">
-                        <Bug className="w-3 h-3 text-red-500" />
-                        Bug ({messageStats.byCategory.bug})
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="suggestion">
-                      <div className="flex items-center gap-2">
-                        <Lightbulb className="w-3 h-3 text-yellow-500" />
-                        Suggestion ({messageStats.byCategory.suggestion})
-                      </div>
-                    </SelectItem>
-                    <SelectItem value="contribute">
-                      <div className="flex items-center gap-2">
-                        <Heart className="w-3 h-3 text-pink-500" />
-                        Contribution ({messageStats.byCategory.contribute})
-                      </div>
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-
-                {(messageStatusFilter !== 'all' || messageCategoryFilter !== 'all') && (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setMessageStatusFilter('all');
-                      setMessageCategoryFilter('all');
-                    }}
-                    className="gap-1"
-                  >
-                    <X className="w-3 h-3" />
-                    Réinitialiser
-                  </Button>
-                )}
-              </div>
-
-              {loadingMessages ? (
-                <div className="text-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-primary" />
-                  <p className="text-muted-foreground mt-2">Chargement des messages...</p>
-                </div>
-              ) : contactMessages.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Mail className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Aucun message</p>
-                  <p className="text-sm">Les messages de contact apparaîtront ici</p>
-                </div>
-              ) : filteredMessages.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <Search className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p className="text-lg font-medium">Aucun message trouvé</p>
-                  <p className="text-sm">Essayez de modifier vos filtres</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <AnimatePresence>
-                    {filteredMessages.map((msg) => (
-                      <motion.div
-                        key={msg.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${msg.status === 'pending' ? 'border-yellow-500/50 bg-yellow-500/5' :
-                          msg.status === 'read' ? 'border-blue-500/50 bg-blue-500/5' :
-                            'border-green-500/50 bg-green-500/5'
-                          }`}
-                        onClick={() => {
-                          setSelectedMessage(msg);
-                          setMessageDialogOpen(true);
-                          if (msg.status === 'pending') {
-                            updateMessageStatus(msg.id, 'read');
-                          }
-                        }}
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 mb-1 flex-wrap">
-                              {getCategoryIcon(msg.category)}
-                              <span className="font-semibold truncate">{msg.subject}</span>
-                              <Badge variant="outline" className="text-xs">
-                                {getCategoryLabel(msg.category)}
-                              </Badge>
-                              <Badge variant={
-                                msg.status === 'pending' ? 'secondary' :
-                                  msg.status === 'read' ? 'outline' :
-                                    'default'
-                              } className={`text-xs shrink-0 ${msg.status === 'pending' ? 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30' : ''
-                                }`}>
-                                {msg.status === 'pending' ? 'Nouveau' : msg.status === 'read' ? 'Lu' : 'Répondu'}
-                              </Badge>
-                            </div>
-                            <p className="text-sm text-muted-foreground line-clamp-2">{msg.message}</p>
-                            <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
-                              <span className="flex items-center gap-1">
-                                <Users className="w-3 h-3" />
-                                {msg.name}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Mail className="w-3 h-3" />
-                                {msg.email}
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Clock className="w-3 h-3" />
-                                {formatDate(msg.created_at)}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-1 shrink-0">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-blue-500/10 text-blue-500"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setSelectedMessage(msg);
-                                setMessageDialogOpen(true);
-                              }}
-                              title="Voir les détails"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 hover:bg-green-500/10 text-green-500"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                updateMessageStatus(msg.id, 'replied');
-                              }}
-                              title="Marquer comme répondu"
-                            >
-                              <Check className="w-4 h-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteMessage(msg.id);
-                              }}
-                              title="Supprimer"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ContactMessagesTab />
         </TabsContent>
 
         <TabsContent value="bots" className="space-y-4">
@@ -5247,6 +4997,10 @@ const Admin = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="contact" className="space-y-4">
+          <ContactMessagesTab />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">

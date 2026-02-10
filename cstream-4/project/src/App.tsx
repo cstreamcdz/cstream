@@ -18,6 +18,7 @@ import { applyTheme, initializeTheme, THEMES } from "@/lib/themes";
 import { blockExternalLinks } from "@/lib/blockExternalLinks";
 import { RadioOverlay } from "@/components/RadioOverlay";
 import { VPNOverlay } from "@/components/VPNOverlay";
+import { InstallPWA } from "@/components/InstallPWA";
 // import { LanguageOverlay } from "@/components/LanguageOverlay";
 
 // Defer non-critical lazy components
@@ -394,7 +395,7 @@ const App = () => {
               },
             }}
           />
-          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <BrowserRouter basename={import.meta.env.BASE_URL} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
             <AuthProvider>
               <ThemeApplier />
               <AdSenseLoader />
@@ -415,6 +416,7 @@ const App = () => {
                   <VPNOverlay />
                   {/* <LanguageOverlay /> */}
                   <CookieConsent />
+                  <InstallPWA />
                 </div>
               </div>
             </AuthProvider>

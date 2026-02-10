@@ -103,14 +103,14 @@ const Settings = () => {
     saving,
     updateSettings,
   } = useUserSettings();
-  
+
   const { selectedFontId, fontSize, setFont, setFontSize } = useFontSettings();
   const { betaMode, adsRemoved, setBetaMode, setAdsRemoved } = useBetaSettings();
 
   const [sessionInfo, setSessionInfo] = useState<SessionInfo | null>(null);
   const [loadingSession, setLoadingSession] = useState(true);
   const [showBetaConfirm, setShowBetaConfirm] = useState(false);
-  
+
   const selectedTheme = settings.theme;
   const notifications = settings.notifications;
   const autoPlay = settings.autoplay;
@@ -128,12 +128,12 @@ const Settings = () => {
       const response = await fetch("https://ipapi.co/json/");
       const data = await response.json();
       const userAgent = navigator.userAgent;
-      
+
       let browser = "Navigateur moderne";
       if (userAgent.includes("Firefox")) browser = "Firefox";
       else if (userAgent.includes("Chrome")) browser = "Chrome";
       else if (userAgent.includes("Safari")) browser = "Safari";
-      
+
       setSessionInfo({
         ip: data.ip || "Inconnue",
         city: data.city || "Inconnue",
@@ -188,7 +188,7 @@ const Settings = () => {
     <div className="min-h-screen bg-background text-foreground selection:bg-primary/30">
       <SEO title="Paramètres - CStream" description="Gérez vos préférences CStream" />
       <Navbar />
-      
+
       <main className="container mx-auto px-4 pt-32 pb-20 max-w-4xl">
         <header className="mb-12">
           <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}>
@@ -199,7 +199,7 @@ const Settings = () => {
           </motion.div>
         </header>
 
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           initial="hidden"
           animate="visible"
@@ -265,9 +265,9 @@ const Settings = () => {
                   <div className="space-y-4">
                     <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground">Luminosité de l'interface ({brightness}%)</Label>
                     <div className="px-2 pt-2">
-                      <Slider 
-                        value={[brightness]} 
-                        onValueChange={handleBrightnessChange} 
+                      <Slider
+                        value={[brightness]}
+                        onValueChange={handleBrightnessChange}
                         min={50} max={150} step={5}
                         className="cursor-pointer"
                       />
@@ -332,8 +332,8 @@ const Settings = () => {
                     </div>
 
                     {betaMode && (
-                      <motion.div 
-                        initial={{ opacity: 0, height: 0 }} 
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: 'auto' }}
                         className="flex items-center justify-between p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20"
                       >
@@ -349,21 +349,19 @@ const Settings = () => {
                   <div className="flex items-center justify-center">
                     <div className="relative group">
                       <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000"></div>
-                      <a 
-                        href="https://drift.rip/cdz" 
-                        target="_blank" 
+                      <a
+                        href="https://drift.rip/cdz"
+                        target="_blank"
                         rel="noopener noreferrer"
-                        className="relative block rounded-xl overflow-hidden border border-white/10 bg-black p-0.5 hover:border-amber-500/50 transition-all z-[100]"
-                        title="click here"
+                        className="relative block rounded-xl overflow-hidden border border-white/10 bg-black p-4 hover:border-amber-500/50 transition-all z-[100] flex items-center justify-center group/btn"
+                        title="Click here"
                         onClick={(e) => {
                           e.stopPropagation();
                         }}
                       >
-                        <img 
-                          src="/animated.gif" 
-                          alt="click here" 
-                          className="w-full h-auto rounded-lg"
-                        />
+                        <span className="font-bold text-lg text-white group-hover/btn:text-amber-500 transition-colors">
+                          CLICK HERE
+                        </span>
                       </a>
                     </div>
                   </div>

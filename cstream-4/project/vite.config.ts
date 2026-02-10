@@ -1,8 +1,11 @@
+
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
+import { VitePWA } from 'vite-plugin-pwa';
 
 export default defineConfig(({ mode }) => ({
+  base: "/cstream/",
   server: {
     host: "0.0.0.0",
     port: 5000,
@@ -15,7 +18,41 @@ export default defineConfig(({ mode }) => ({
       "Access-Control-Allow-Headers": "*",
     },
   },
-  plugins: [react()].filter(Boolean),
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
+      manifest: {
+        name: 'CStream - Films & Séries en Streaming',
+        short_name: 'CStream',
+        description: 'Regardez vos films et séries préférés en streaming gratuitement.',
+        theme_color: '#09090b',
+        background_color: '#09090b',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        icons: [
+          {
+            src: '/android-chrome-192x192.png',
+            sizes: '192x192',
+            type: 'image/png'
+          },
+          {
+            src: '/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png'
+          },
+          {
+            src: '/android-chrome-512x512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any maskable'
+          }
+        ]
+      }
+    })
+  ].filter(Boolean),
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -48,15 +85,12 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // Group heavy foundational libraries together
             if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
               return 'vendor-core';
             }
-            // Group UI/Utility libs
             if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('framer-motion')) {
               return 'vendor-ui';
             }
-            // Let everything else (including Recharts) be handled by Vite's auto-splitting
           }
         },
       },

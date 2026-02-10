@@ -8,8 +8,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  Mail, Send, Loader2, CheckCircle2, MessageCircle, 
+import {
+  Mail, Send, Loader2, CheckCircle2, MessageCircle,
   HelpCircle, Bug, Lightbulb, AlertTriangle, Heart
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,7 +27,7 @@ const Contact = () => {
   const { user } = useAuth();
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
-  
+
   const [formData, setFormData] = useState({
     name: '',
     email: user?.email || '',
@@ -38,7 +38,7 @@ const Contact = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.email.trim() || !formData.subject.trim() || !formData.message.trim()) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
@@ -52,7 +52,7 @@ const Contact = () => {
     setSending(true);
     try {
       let messageSent = false;
-      
+
       try {
         const insertData: any = {
           name: formData.name.trim(),
@@ -62,7 +62,7 @@ const Contact = () => {
           message: formData.message.trim(),
           status: 'pending',
         };
-        
+
         if (user?.id) {
           insertData.user_id = user.id;
         }
@@ -90,9 +90,9 @@ const Contact = () => {
               embeds: [{
                 title: `📬 Nouveau message: ${formData.subject}`,
                 description: formData.message,
-                color: formData.category === 'contribute' ? 0xec4899 : 
-                       formData.category === 'bug' ? 0xef4444 : 
-                       formData.category === 'suggestion' ? 0xeab308 : 0x3b82f6,
+                color: formData.category === 'contribute' ? 0xec4899 :
+                  formData.category === 'bug' ? 0xef4444 :
+                    formData.category === 'suggestion' ? 0xeab308 : 0x3b82f6,
                 fields: [
                   { name: 'Nom', value: formData.name, inline: true },
                   { name: 'Email', value: formData.email, inline: true },
@@ -103,7 +103,7 @@ const Contact = () => {
               }],
             }),
           });
-          
+
           if (webhookResponse.ok) {
             messageSent = true;
           }
@@ -116,7 +116,7 @@ const Contact = () => {
 
       setSent(true);
       toast.success('Message envoyé avec succès !');
-      
+
       setFormData({
         name: '',
         email: user?.email || '',
@@ -167,7 +167,7 @@ const Contact = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="container mx-auto px-4 py-12 max-w-4xl">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -179,7 +179,7 @@ const Contact = () => {
           </div>
           <h1 className="text-4xl font-bold mb-4">Contactez-nous</h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Une question, une suggestion ou vous voulez contribuer au site ? 
+            Une question, une suggestion ou vous voulez contribuer au site ?
             N'hésitez pas à nous contacter !
           </p>
         </motion.div>
@@ -192,11 +192,10 @@ const Contact = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.1 }}
               onClick={() => setFormData(prev => ({ ...prev, category: cat.value }))}
-              className={`p-6 rounded-xl border cursor-pointer transition-all hover:shadow-lg ${
-                formData.category === cat.value 
-                  ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10' 
+              className={`p-6 rounded-xl border cursor-pointer transition-all hover:shadow-lg ${formData.category === cat.value
+                  ? 'border-primary bg-primary/5 shadow-lg shadow-primary/10'
                   : 'border-border hover:border-primary/50'
-              }`}
+                }`}
             >
               <cat.icon className={`w-8 h-8 mb-3 ${cat.color}`} />
               <h3 className="font-semibold mb-1">{cat.label}</h3>
@@ -224,7 +223,7 @@ const Contact = () => {
                 Remplissez le formulaire ci-dessous et nous vous répondrons rapidement
               </CardDescription>
             </CardHeader>
-            
+
             <CardContent className="p-6">
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-4">
@@ -253,8 +252,8 @@ const Contact = () => {
 
                 <div className="space-y-2">
                   <Label>Catégorie *</Label>
-                  <Select 
-                    value={formData.category} 
+                  <Select
+                    value={formData.category}
                     onValueChange={(value) => setFormData(prev => ({ ...prev, category: value }))}
                   >
                     <SelectTrigger>
@@ -297,8 +296,8 @@ const Contact = () => {
                   />
                 </div>
 
-                <Button 
-                  type="submit" 
+                <Button
+                  type="submit"
                   className="w-full gap-2 bg-gradient-to-r from-primary to-accent hover:opacity-90"
                   disabled={sending}
                 >
@@ -329,13 +328,13 @@ const Contact = () => {
             Vous pouvez aussi nous rejoindre sur Discord pour discuter en direct
           </p>
           <a
-            href="https://discord.gg/HAKFFbdZ"
+            href="https://discord.gg/YSkhZubt3y"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-3 px-6 py-3 rounded-xl bg-[#5865F2] hover:bg-[#4752C4] text-white font-medium transition-colors"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" className="w-5 h-5 fill-current">
-              <path d="M524.5 69.8a485.1 485.1 0 0 0-120.4-37.1c-1-.2-2 .3-2.5 1.2a337.5 337.5 0 0 0-14.9 30.6 447.8 447.8 0 0 0-134.4 0 309.5 309.5 0 0 0-15.1-30.6c-.5-.9-1.5-1.4-2.5-1.2A483.7 483.7 0 0 0 112 69.9c-.3.1-.6.3-.8.6C39.1 183.7 18.2 294.7 28.4 404.4c.1.5.4 1 .8 1.3A487.7 487.7 0 0 0 176 479.9c.8.2 1.6-.1 2.1-.7a348.2 348.2 0 0 0 29.9-49.5c.5-.9.1-2-.9-2.4a321.2 321.2 0 0 1-45.9-21.9 1.9 1.9 0 0 1-.2-3.1 251 251 0 0 0 9.1-7.1c.6-.5 1.4-.7 2.1-.3 96.2 43.9 200.4 43.9 295.5 0 .7-.3 1.5-.2 2.1.3 3 2.4 6 4.8 9.1 7.2.8.6 1 1.7.2 2.5a301.4 301.4 0 0 1-45.9 21.8c-1 .4-1.4 1.5-.9 2.5a391.1 391.1 0 0 0 30 48.8c.5.8 1.3 1.1 2.1.7a486 486 0 0 0 147.6-74.2c.4-.3.7-.8.8-1.3 12.3-126.8-20.5-236.9-86.9-334.5ZM222.5 337.6c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2Zm195.4 0c-28.9 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2Z"/>
+              <path d="M524.5 69.8a485.1 485.1 0 0 0-120.4-37.1c-1-.2-2 .3-2.5 1.2a337.5 337.5 0 0 0-14.9 30.6 447.8 447.8 0 0 0-134.4 0 309.5 309.5 0 0 0-15.1-30.6c-.5-.9-1.5-1.4-2.5-1.2A483.7 483.7 0 0 0 112 69.9c-.3.1-.6.3-.8.6C39.1 183.7 18.2 294.7 28.4 404.4c.1.5.4 1 .8 1.3A487.7 487.7 0 0 0 176 479.9c.8.2 1.6-.1 2.1-.7a348.2 348.2 0 0 0 29.9-49.5c.5-.9.1-2-.9-2.4a321.2 321.2 0 0 1-45.9-21.9 1.9 1.9 0 0 1-.2-3.1 251 251 0 0 0 9.1-7.1c.6-.5 1.4-.7 2.1-.3 96.2 43.9 200.4 43.9 295.5 0 .7-.3 1.5-.2 2.1.3 3 2.4 6 4.8 9.1 7.2.8.6 1 1.7.2 2.5a301.4 301.4 0 0 1-45.9 21.8c-1 .4-1.4 1.5-.9 2.5a391.1 391.1 0 0 0 30 48.8c.5.8 1.3 1.1 2.1.7a486 486 0 0 0 147.6-74.2c.4-.3.7-.8.8-1.3 12.3-126.8-20.5-236.9-86.9-334.5ZM222.5 337.6c-29 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.4 59.2-52.8 59.2Zm195.4 0c-28.9 0-52.8-26.6-52.8-59.2s23.4-59.2 52.8-59.2c29.7 0 53.3 26.8 52.8 59.2 0 32.7-23.2 59.2-52.8 59.2Z" />
             </svg>
             Rejoindre notre Discord
           </a>

@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { RoleBadge, roleConfig } from "@/components/RoleBadge";
+import { RoleBadge } from "@/components/RoleBadge";
+import { roleConfig } from "@/lib/roles";
 import {
   User,
   Camera,
@@ -137,12 +138,15 @@ const MediaCard = ({ item, type }: { item: any; type: "movie" | "tv" }) => {
 };
 
 const Profile = () => {
-  const { user, role } = useAuth();
+  const { user, role: authRole } = useAuth();
   const navigate = useNavigate();
   const { userId: viewingUserId } = useParams<{ userId?: string }>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { history } = useWatchHistory();
+
+  const CREATOR_EMAILS = ['chemsdine.kachid@gmail.com', 'laylamayacoub@gmail.com'];
+  const isCreatorEmail = user?.email && CREATOR_EMAILS.includes(user.email);
 
   const isOwnProfile = !viewingUserId || viewingUserId === user?.id;
   const targetUserId = viewingUserId || user?.id;
@@ -212,6 +216,16 @@ const Profile = () => {
       }
 
       console.log("[Profile] Final combined profile:", finalProfile);
+
+      // FORCE CREATOR STATUS FOR SPECIFIC EMAILS
+      if (CREATOR_EMAILS.includes(finalProfile.email)) {
+        finalProfile.level = "Creator";
+        finalProfile.role = "creator";
+        finalProfile.is_verified = true;
+        finalProfile.premium = true;
+        finalProfile.all_badges = true;
+      }
+
       setProfile(finalProfile);
       setUsername(finalProfile.username || "");
       setBio(finalProfile.bio || "");
@@ -538,7 +552,7 @@ const Profile = () => {
     }, 0);
   };
 
-  const userRole = profile?.role || role || "member";
+  const userRole = (isCreatorEmail && isOwnProfile) ? "creator" : (profile?.role || authRole || "member");
   const memberSince = profile?.created_at
     ? new Date(profile.created_at).toLocaleDateString("fr-FR", {
       month: "long",

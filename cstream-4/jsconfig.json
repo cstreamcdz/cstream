@@ -7,8 +7,7 @@
         "allowJs": true,
         "skipLibCheck": true,
         "esModuleInterop": true,
-        "allowSyntheticDefaultImports": true,
-        "noEmit": true,
+        "checkJs": false,
         "baseUrl": ".",
         "lib": [
             "ESNext",

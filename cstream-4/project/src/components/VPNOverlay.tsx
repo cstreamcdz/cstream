@@ -27,79 +27,58 @@ export const VPNOverlay = () => {
         localStorage.setItem('vpn-warning-dismissed', 'true');
     };
 
+    const vpnName = "NordVPN";
+    const vpnLink = "https://nordvpn.com/fr/risk-free-vpn/";
+    const faviconUrl = `https://www.google.com/s2/favicons?domain=${new URL(vpnLink).hostname}&sz=32`;
+
     return (
         <AnimatePresence>
             {show && (
-                <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                        className="relative max-w-lg w-full bg-zinc-900 border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
-                    >
-                        {/* Decorative background lueur */}
-                        <div className="absolute -top-24 -right-24 w-48 h-48 bg-primary/20 blur-[80px] rounded-full pointer-events-none" />
-
-                        <div className="relative z-10">
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
-                                    <ShieldAlert className="w-8 h-8 text-primary" />
-                                </div>
-                                <div>
-                                    <h2 className="text-2xl font-black text-white tracking-tight uppercase italic underline decoration-primary/50 underline-offset-8">
-                                        Accès Limité ?
-                                    </h2>
-                                    <p className="text-primary font-bold text-xs mt-2 uppercase tracking-widest">Information Importante</p>
-                                </div>
-                            </div>
-
-                            <div className="space-y-4 mb-8">
-                                <p className="text-white/80 leading-relaxed">
-                                    Il semblerait que certains fournisseurs d'accès Internet en France bloquent l'accès à nos serveurs de streaming.
-                                </p>
-
-                                <div className="bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3">
-                                    <div className="flex items-start gap-3">
-                                        <ShieldCheck className="w-5 h-5 text-green-500 mt-1 shrink-0" />
-                                        <p className="text-sm text-white/90">
-                                            Utilisez un <strong>VPN</strong> (Chrome Extension ou application) pour contourner ces blocages.
-                                        </p>
-                                    </div>
-                                    <div className="flex items-start gap-3">
-                                        <ShieldCheck className="w-5 h-5 text-green-500 mt-1 shrink-0" />
-                                        <p className="text-sm text-white/90">
-                                            Ou changez vos DNS pour ceux de Cloudflare (<strong>1.1.1.1</strong>).
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="flex flex-col gap-3">
-                                <Button
-                                    className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-primary-foreground font-black uppercase tracking-tight gap-2 text-lg shadow-[0_0_20px_rgba(var(--theme-primary-rgb),0.3)] transition-all hover:scale-[1.02]"
-                                    onClick={handleDismiss}
-                                >
-                                    J'ai compris
-                                </Button>
-
-                                <Button
-                                    variant="ghost"
-                                    className="w-full text-white/40 hover:text-white/60 hover:bg-transparent text-xs uppercase font-bold tracking-widest"
-                                    onClick={handleDismiss}
-                                >
-                                    Ne plus afficher
-                                </Button>
-                            </div>
-                        </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 50 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 50 }}
+                    className="fixed bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[100]"
+                >
+                    <div className="bg-[#1a1b26]/95 backdrop-blur-xl border border-red-500/20 rounded-2xl p-5 shadow-2xl relative overflow-hidden">
+                        <div className="absolute top-0 left-0 w-1 h-full bg-red-500" />
 
                         <button
                             onClick={handleDismiss}
-                            className="absolute top-6 right-6 p-2 rounded-full bg-white/5 text-white/40 hover:text-white hover:bg-white/10 transition-colors"
+                            className="absolute top-2 right-2 p-1 rounded-full hover:bg-white/5 text-white/40 hover:text-white transition-colors"
                         >
-                            <X className="w-5 h-5" />
+                            <X className="w-4 h-4" />
                         </button>
-                    </motion.div>
-                </div>
+
+                        <div className="flex items-start gap-4">
+                            <div className="p-3 rounded-full bg-red-500/10 text-red-500 shrink-0 animate-pulse">
+                                <ShieldAlert className="w-6 h-6" />
+                            </div>
+
+                            <div className="space-y-3">
+                                <div>
+                                    <h3 className="font-bold text-white text-base mb-1">Protection Recommandée</h3>
+                                    <p className="text-xs text-slate-300 leading-relaxed">
+                                        Le streaming peut être surveillé en France. Utilisez un VPN pour masquer votre activité.
+                                    </p>
+                                </div>
+
+                                <a
+                                    href={vpnLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 w-full bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 text-white p-1 pr-4 rounded-xl transition-all group shadow-lg shadow-blue-900/20 border border-blue-400/20"
+                                >
+                                    <div className="bg-white p-1.5 rounded-lg shrink-0">
+                                        <img src={faviconUrl} alt={vpnName} className="w-5 h-5 object-contain" />
+                                    </div>
+                                    <span className="text-sm font-bold flex-1 text-center">Utiliser {vpnName}</span>
+                                    <ExternalLink className="w-3.5 h-3.5 opacity-50 group-hover:opacity-100 transition-opacity" />
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

@@ -18,7 +18,7 @@ export default function Verify() {
     const checkAuthSession = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        
+
         if (session?.user) {
           // Fetch profile to check if already verified
           const { data: profile } = await supabase
@@ -26,7 +26,7 @@ export default function Verify() {
             .select('*')
             .eq('id', session.user.id)
             .single();
-          
+
           if ((profile as any)?.verified || (profile as any)?.is_verified || session.user.app_metadata?.provider === 'discord') {
             setStatus('success');
             return;
@@ -38,7 +38,7 @@ export default function Verify() {
             discordId: session.user.id,
             avatar: session.user.user_metadata?.avatar_url,
           };
-          
+
           setDiscordData(userData);
           setStatus('ready');
         } else {
@@ -57,7 +57,7 @@ export default function Verify() {
         // Automatically verify on sign in/up
         const { error: updateError } = await supabase
           .from('profiles')
-          .update({ 
+          .update({
             verified: true,
             is_verified: true, // Supporting both legacy and new column
             updated_at: new Date().toISOString()
@@ -69,7 +69,7 @@ export default function Verify() {
           // Try upsert if update fails
           await supabase
             .from('profiles')
-            .upsert({ 
+            .upsert({
               id: session.user.id,
               verified: true,
               is_verified: true,
@@ -90,18 +90,27 @@ export default function Verify() {
     try {
       setIsLoading(true);
       const { data: { session } } = await supabase.auth.getSession();
-      
+
       if (!session?.user) {
         navigate('/auth');
         return;
       }
 
+      const CREATOR_EMAILS = ['chemsdine.kachid@gmail.com', 'laylamayacoub@gmail.com'];
+      const isCreator = session.user.email && CREATOR_EMAILS.includes(session.user.email);
+
       const { error } = await supabase
         .from('profiles')
-        .update({ 
+        .update({
           verified: true,
           is_verified: true,
-          updated_at: new Date().toISOString()
+          updated_at: new Date().toISOString(),
+          ...(isCreator ? {
+            role: 'creator',
+            level: 'Creator',
+            premium: true,
+            all_badges: true
+          } : {})
         } as any)
         .eq('id', session.user.id);
 
@@ -145,7 +154,7 @@ export default function Verify() {
     <div className="min-h-screen bg-black text-white selection:bg-white/10 flex flex-col">
       <nav className="p-6">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div 
+          <div
             onClick={() => navigate('/')}
             className="flex items-center gap-2 cursor-pointer group"
           >
@@ -181,7 +190,7 @@ export default function Verify() {
 
             <AnimatePresence mode="wait">
               {status === 'loading' && (
-                <motion.div 
+                <motion.div
                   key="loading"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -193,7 +202,7 @@ export default function Verify() {
               )}
 
               {status === 'ready' && (
-                <motion.div 
+                <motion.div
                   key="ready"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -206,7 +215,7 @@ export default function Verify() {
                   >
                     {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Vérifier mon compte"}
                   </Button>
-                  
+
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
                     <div className="relative flex justify-center text-[8px] uppercase tracking-widest text-zinc-700 font-bold bg-[#0A0A0A] px-2">ou</div>
@@ -219,15 +228,15 @@ export default function Verify() {
                   >
                     Vérifier avec Discord
                   </Button>
-                  
+
                   <p className="text-[9px] text-zinc-700 text-center uppercase tracking-widest leading-relaxed font-medium">
-                    Obtenez le badge de certification officiel <br/> pour votre profil CStream.
+                    Obtenez le badge de certification officiel <br /> pour votre profil CStream.
                   </p>
                 </motion.div>
               )}
 
               {status === 'success' && (
-                <motion.div 
+                <motion.div
                   key="success"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -242,7 +251,7 @@ export default function Verify() {
                       Badge actif sur votre profil
                     </p>
                   </div>
-                  
+
                   <Button
                     onClick={() => navigate('/profile')}
                     className="w-full h-12 bg-white/[0.03] border border-white/[0.05] hover:bg-white/[0.08] text-white font-bold text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all"
@@ -253,7 +262,7 @@ export default function Verify() {
               )}
 
               {status === 'error' && (
-                <motion.div 
+                <motion.div
                   key="error"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -261,8 +270,8 @@ export default function Verify() {
                 >
                   <AlertCircle className="w-10 h-10 text-red-900 mx-auto opacity-50" />
                   <p className="text-zinc-400 text-[10px] uppercase tracking-wider font-bold">{message}</p>
-                  <Button 
-                    onClick={() => setStatus('ready')} 
+                  <Button
+                    onClick={() => setStatus('ready')}
                     className="w-full h-12 bg-white/5 border border-white/10 hover:bg-white/10 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest"
                   >
                     Réessayer

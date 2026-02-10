@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Play, RefreshCw, Trophy, Clock, Globe, Volume2, Zap, Search, X, Star, Calendar } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { StreamedAPI } from '@/lib/streamed';
 
 const API_BASE = '/api/sports';
 const imageCache = new Map<string, string>();
@@ -157,28 +158,28 @@ const Sports = () => {
   const fetchMatches = useCallback(async (sportId: string) => {
     try {
       setLoading(true);
-      
+
       if (apiType === 'footy') {
         let endpoint = 'all';
         if (sportId === 'live') endpoint = 'live';
         else if (sportId === 'football') endpoint = 'football';
         else if (sportId === 'basketball') endpoint = 'basketball';
-        
+
         // Handle categories and live filtering according to provided docs
-        const url = sportId === 'live' 
+        const url = sportId === 'live'
           ? `https://api.watchfooty.st/api/v1/matches/live`
           : `https://api.watchfooty.st/api/v1/matches/${sportId === 'all' || sportId === 'schedule' ? 'all' : sportId}`;
 
         const response = await fetch(url);
         if (!response.ok) throw new Error('API Error');
         const data = await response.json();
-        
+
         const matchesArray = Array.isArray(data) ? data : [];
         const mappedMatches = matchesArray.map((m: any) => {
           // Map streams correctly based on Footy API response format
-          const sources = (m.streams || []).map((s: any) => ({ 
-            source: 'footy', 
-            id: s.id || Math.random().toString(36).substring(2, 11), 
+          const sources = (m.streams || []).map((s: any) => ({
+            source: 'footy',
+            id: s.id || Math.random().toString(36).substring(2, 11),
             url: s.url,
             language: s.language || 'Multi',
             quality: s.quality || 'HD'
@@ -190,12 +191,12 @@ const Sports = () => {
             category: m.sport || 'Sport',
             date: m.timestamp ? m.timestamp * 1000 : Date.now(),
             teams: {
-              home: { 
-                name: m.teams?.home?.name || 'Home', 
-                badge: m.teams?.home?.logoUrl || m.teams?.home?.logo || null 
+              home: {
+                name: m.teams?.home?.name || 'Home',
+                badge: m.teams?.home?.logoUrl || m.teams?.home?.logo || null
               },
-              away: { 
-                name: m.teams?.away?.name || 'Away', 
+              away: {
+                name: m.teams?.away?.name || 'Away',
                 badge: m.teams?.away?.logoUrl || m.teams?.away?.logo || null
               }
             },
@@ -208,41 +209,45 @@ const Sports = () => {
         return;
       }
 
-      let endpoint = sportId;
-      if (sportId === 'live') endpoint = 'live';
-      else if (sportId === 'all') endpoint = 'all';
-      else if (sportId === 'schedule') endpoint = 'today';
 
-      const apiUrl = `${API_BASE}/matches/${endpoint}`;
-      const response = await fetch(apiUrl);
-      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-      const data = await response.json();
+      if (apiType === 'streamed') {
+        let data;
+        if (sportId === 'live') {
+          data = await StreamedAPI.getLiveMatches();
+        } else if (sportId === 'all') {
+          data = await StreamedAPI.getAllMatches();
+        } else if (sportId === 'schedule') {
+          // Schedule isn't directly supported by 'getAllMatches' nicely filtered, 
+          // but 'getAllMatches' returns everything.
+          // StreamedAPI.getAllMatches() returns Match[]
+          data = await StreamedAPI.getLiveMatches(); // fallback or actual schedule?
+          // API docs say: /matches/all, /matches/live, /matches/sport/:sport
+          // 'schedule' in this app seems to mean 'today' or 'all'.
+          const all = await StreamedAPI.getAllMatches();
+          data = all;
+        } else {
+          data = await StreamedAPI.getSportMatches(sportId);
+        }
 
-      const matchesArray = Array.isArray(data) ? data : (data?.matches || []);
-
-      if (matchesArray && matchesArray.length > 0) {
-        const mappedMatches = matchesArray.map((m: any) => ({
-          id: m.id || Math.random().toString(36).substr(2, 9),
-          title: m.title || 'Match sans titre',
-          category: m.category || 'Sport',
-          date: m.date ? (typeof m.date === 'string' ? new Date(m.date).getTime() : m.date) : Date.now(),
-          teams: {
-            home: { 
-              name: m.teams?.home?.name || 'Home', 
-              badge: m.teams?.home?.badge ? `https://streamed.pk/api/images/badge/${m.teams.home.badge}.webp` : null 
+        if (data && data.length > 0) {
+          const mappedMatches = data.map((m: any) => ({
+            id: m.slug || Math.random().toString(36).substr(2, 9), // StreamedAPI uses slug
+            title: m.title,
+            category: m.sport || 'Sport',
+            date: m.date ? new Date(m.date).getTime() : Date.now(),
+            teams: {
+              home: { name: 'Home', badge: null }, // StreamedAPI might not return teams separated
+              away: { name: 'Away', badge: null }
             },
-            away: { 
-              name: m.teams?.away?.name || 'Away', 
-              badge: m.teams?.away?.badge ? `https://streamed.pk/api/images/badge/${m.teams.away.badge}.webp` : null
-            }
-          },
-          poster: m.poster ? (m.poster.startsWith('http') ? m.poster : `https://streamed.pk${m.poster}.webp`) : null,
-          popular: m.popular || false,
-          sources: m.sources || [],
-        }));
-        setMatches(mappedMatches);
-      } else {
-        setMatches([]);
+            // StreamedAPI returns 'poster'
+            poster: m.poster,
+            popular: false,
+            sources: m.sources || []
+          }));
+          setMatches(mappedMatches);
+        } else {
+          setMatches([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching matches:', error);
@@ -258,7 +263,7 @@ const Sports = () => {
   }, [selectedSport, apiType, fetchMatches]);
 
   const filteredMatches = useMemo(() => {
-    return matches.filter(m => 
+    return matches.filter(m =>
       m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       m.category.toLowerCase().includes(searchQuery.toLowerCase())
     ).sort((a, b) => (b.popular ? 1 : 0) - (a.popular ? 1 : 0));
@@ -302,22 +307,22 @@ const Sports = () => {
       }
 
       const source = match.sources[0];
-      const res = await fetch(`${API_BASE}/stream/${source.source}/${source.id}`, { 
-        signal: AbortSignal.timeout(15000) 
+      const res = await fetch(`${API_BASE}/stream/${source.source}/${source.id}`, {
+        signal: AbortSignal.timeout(15000)
       });
 
       if (!res.ok) {
         // Retry with backup API directly
         const backupRes = await fetch(`https://streamed.pk/api/sports/stream/${source.source}/${source.id}`);
         if (!backupRes.ok) {
-           const proxyRes = await fetch(`/api/proxy?url=${encodeURIComponent(`https://streamed.pk/api/sports/stream/${source.source}/${source.id}`)}`);
-           if (!proxyRes.ok) throw new Error(`Serveur indisponible`);
-           const data = await proxyRes.json();
-           const streams: Stream[] = Array.isArray(data) ? data : (data?.streams || []);
-           if (streams.length === 0) throw new Error('Aucun flux');
-           setStreamModal({ show: true, match, streams });
-           setSelectedStream(streams[0]);
-           return;
+          const proxyRes = await fetch(`/api/proxy?url=${encodeURIComponent(`https://streamed.pk/api/sports/stream/${source.source}/${source.id}`)}`);
+          if (!proxyRes.ok) throw new Error(`Serveur indisponible`);
+          const data = await proxyRes.json();
+          const streams: Stream[] = Array.isArray(data) ? data : (data?.streams || []);
+          if (streams.length === 0) throw new Error('Aucun flux');
+          setStreamModal({ show: true, match, streams });
+          setSelectedStream(streams[0]);
+          return;
         }
         const data = await backupRes.json();
         const streams: Stream[] = Array.isArray(data) ? data : (data?.streams || []);
@@ -361,7 +366,7 @@ const Sports = () => {
     const isLive = match.date < Date.now() && (match.date + 7200000) > Date.now();
 
     return (
-      <div 
+      <div
         className="group relative bg-[#0d0d0f] rounded-xl overflow-hidden border border-white/5 hover:border-primary/40 transition-all duration-300 cursor-pointer h-full flex flex-col shadow-lg shadow-black/20"
         onClick={(e) => handleWatchClick(match, e)}
       >
@@ -378,8 +383,8 @@ const Sports = () => {
 
         <div className="aspect-[16/9] relative overflow-hidden bg-[#151517]">
           <div className="absolute inset-0">
-            <img 
-              src={getImageUrl(match.poster, 'poster')} 
+            <img
+              src={getImageUrl(match.poster, 'poster')}
               alt=""
               className="w-full h-full object-cover opacity-50 blur-[4px] scale-110 group-hover:opacity-70 group-hover:blur-[2px] transition-all duration-700"
               loading="lazy"
@@ -392,9 +397,9 @@ const Sports = () => {
             <div className="flex items-center gap-6 scale-90 group-hover:scale-100 transition-all duration-500">
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-colors duration-500">
-                  <img 
-                    src={getImageUrl(match.teams?.home?.badge, 'badge')} 
-                    alt="" 
+                  <img
+                    src={getImageUrl(match.teams?.home?.badge, 'badge')}
+                    alt=""
                     className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]"
                     loading="lazy"
                   />
@@ -409,9 +414,9 @@ const Sports = () => {
 
               <div className="flex flex-col items-center gap-2">
                 <div className="w-14 h-14 bg-white/5 backdrop-blur-md rounded-2xl border border-white/10 flex items-center justify-center shadow-2xl group-hover:border-primary/50 transition-colors duration-500">
-                  <img 
-                    src={getImageUrl(match.teams?.away?.badge, 'badge')} 
-                    alt="" 
+                  <img
+                    src={getImageUrl(match.teams?.away?.badge, 'badge')}
+                    alt=""
                     className="w-10 h-10 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.4)]"
                     loading="lazy"
                   />
@@ -436,7 +441,7 @@ const Sports = () => {
             </h3>
           </div>
 
-          <button 
+          <button
             className="w-full py-1.5 rounded-lg bg-white/5 hover:bg-primary text-[8px] font-black text-white transition-all duration-300 flex items-center justify-center gap-1.5 border border-white/5 hover:border-transparent group/btn uppercase tracking-widest overflow-hidden relative"
           >
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-700" />
@@ -464,17 +469,15 @@ const Sports = () => {
             <div className="flex bg-white/5 p-1 rounded-xl border border-white/10">
               <button
                 onClick={() => setApiType('streamed')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                  apiType === 'streamed' ? 'bg-primary text-white' : 'text-white/40 hover:text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${apiType === 'streamed' ? 'bg-primary text-white' : 'text-white/40 hover:text-white'
+                  }`}
               >
                 STREAMED API
               </button>
               <button
                 onClick={() => setApiType('footy')}
-                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${
-                  apiType === 'footy' ? 'bg-primary text-white' : 'text-white/40 hover:text-white'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-[10px] font-black transition-all ${apiType === 'footy' ? 'bg-primary text-white' : 'text-white/40 hover:text-white'
+                  }`}
               >
                 FOOTY API
               </button>
@@ -482,22 +485,21 @@ const Sports = () => {
 
             <button
               onClick={() => setVpnMode(!vpnMode)}
-              className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all duration-300 border flex items-center gap-2 ${
-                vpnMode 
-                ? 'bg-primary/20 border-primary text-primary shadow-lg shadow-primary/10' 
+              className={`px-4 py-2 rounded-xl text-[10px] font-black transition-all duration-300 border flex items-center gap-2 ${vpnMode
+                ? 'bg-primary/20 border-primary text-primary shadow-lg shadow-primary/10'
                 : 'bg-white/10 border-white/20 text-white shadow-[0_0_15px_rgba(255,255,255,0.1)]'
-              }`}
+                }`}
             >
               <div className={`w-2 h-2 rounded-full ${vpnMode ? 'bg-primary animate-pulse' : 'bg-green-500 animate-pulse'}`} />
               VPN MODE: {vpnMode ? 'OUI (VPN REQUIS)' : 'NON (PROXY ACTIF)'}
             </button>
 
-            <Button 
-              onClick={() => fetchMatches(selectedSport)} 
-              variant="outline" 
+            <Button
+              onClick={() => fetchMatches(selectedSport)}
+              variant="outline"
               className="rounded-xl gap-2 bg-white/5 border-white/10 hover:bg-white/10 text-xs font-bold"
             >
-              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} /> 
+              <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
               ACTUALISER
             </Button>
           </div>
@@ -542,11 +544,10 @@ const Sports = () => {
               <button
                 key={sport.id}
                 onClick={() => setSelectedSport(sport.id)}
-                className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${
-                  selectedSport === sport.id
-                    ? 'bg-primary text-white shadow-lg'
-                    : 'bg-white/5 text-foreground hover:bg-white/10 border border-white/10'
-                }`}
+                className={`px-4 py-2 rounded-lg font-semibold whitespace-nowrap transition-all ${selectedSport === sport.id
+                  ? 'bg-primary text-white shadow-lg'
+                  : 'bg-white/5 text-foreground hover:bg-white/10 border border-white/10'
+                  }`}
               >
                 {sport.name}
               </button>
@@ -556,9 +557,9 @@ const Sports = () => {
 
         <div>
           <h2 className="text-2xl font-bold mb-6">
-            {selectedSport === 'all' ? 'Tous les matches' : 
-             selectedSport === 'live' ? 'En direct maintenant' : 
-             selectedSport === 'schedule' ? 'Programme du jour' : 'Matches'}
+            {selectedSport === 'all' ? 'Tous les matches' :
+              selectedSport === 'live' ? 'En direct maintenant' :
+                selectedSport === 'schedule' ? 'Programme du jour' : 'Matches'}
           </h2>
 
           {loading ? (
@@ -630,11 +631,10 @@ const Sports = () => {
                       <button
                         key={s.id}
                         onClick={() => setSelectedStream(s)}
-                        className={`flex flex-col items-center px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all border ${
-                          selectedStream.id === s.id
-                            ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
-                            : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
-                        }`}
+                        className={`flex flex-col items-center px-3 py-1.5 rounded-xl text-[10px] font-bold whitespace-nowrap transition-all border ${selectedStream.id === s.id
+                          ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20'
+                          : 'bg-white/5 text-white/60 border-white/10 hover:bg-white/10'
+                          }`}
                       >
                         <span className="uppercase">{s.source} #{s.streamNo}</span>
                         <span className="text-[8px] opacity-70">{languageLabels[s.language] || s.language}</span>
