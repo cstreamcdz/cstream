@@ -8,6 +8,7 @@
         "skipLibCheck": true,
         "esModuleInterop": true,
         "allowSyntheticDefaultImports": true,
+        "noEmit": true,
         "baseUrl": ".",
         "paths": {
             "@/*": [
@@ -16,7 +17,6 @@
         }
     },
     "include": [
-        "project/src",
         "api"
     ],
     "exclude": [

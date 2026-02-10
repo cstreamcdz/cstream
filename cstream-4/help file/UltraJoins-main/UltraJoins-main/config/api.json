@@ -1,8 +1,0 @@
-{
-    "dashboard": {
-         "clientID": "client id",
-         "clientSecret": "client secret",
-         "callbackURL": "https://ultrajoins.com/auth/discord/callback"
-    },
-    "port": "80"
-}
