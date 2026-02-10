@@ -10,6 +10,11 @@
         "allowSyntheticDefaultImports": true,
         "noEmit": true,
         "baseUrl": ".",
+        "lib": [
+            "ESNext",
+            "DOM",
+            "DOM.Iterable"
+        ],
         "paths": {
             "@/*": [
                 "./project/src/*"
@@ -17,6 +22,8 @@
         }
     },
     "include": [
+        "types.d.ts",
+        "project/src",
         "api"
     ],
     "exclude": [
