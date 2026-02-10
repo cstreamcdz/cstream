@@ -4,13 +4,13 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
-import { 
-  Users, Film, Tv, Star, TrendingUp, Activity, Eye, Clock, 
+import {
+  Users, Film, Tv, Star, TrendingUp, Activity, Eye, Clock,
   BarChart3, PieChart as PieChartIcon, ArrowUpRight, ArrowDownRight, Loader2,
   Calendar, Globe, Heart, Bookmark, MessageCircle, RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { 
+import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar, Legend
 } from 'recharts';
@@ -41,16 +41,16 @@ interface UserActivity {
   created_at: string;
 }
 
-const StatCard = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  description, 
+const StatCard = ({
+  title,
+  value,
+  icon: Icon,
+  description,
   trend,
   color = 'primary'
-}: { 
-  title: string; 
-  value: number | string; 
+}: {
+  title: string;
+  value: number | string;
   icon: any;
   description?: string;
   trend?: { value: number; positive: boolean };
@@ -130,9 +130,9 @@ const ActivityItem = ({ user }: { user: UserActivity }) => {
     <div className="flex items-center gap-3 p-3 rounded-xl bg-secondary/30 hover:bg-secondary/50 transition-colors">
       <div className="relative">
         {user.avatar_url ? (
-          <img 
-            src={user.avatar_url} 
-            alt={user.username} 
+          <img
+            src={user.avatar_url}
+            alt={user.username}
             className="w-10 h-10 rounded-full object-cover"
           />
         ) : (
@@ -197,16 +197,19 @@ export const AnalyticsTab = () => {
         favoritesResult,
         watchlistResult,
         historyResult,
+        messagesResult,
       ] = await Promise.all([
         safeQuery(supabase.from('profiles').select('id, username, avatar_url, status, created_at', { count: 'exact' })),
         safeQuery(supabase.from('readers').select('id, media_type', { count: 'exact' })),
         safeQuery(supabase.from('favorites').select('id', { count: 'exact' })),
         safeQuery(supabase.from('watchlist').select('id', { count: 'exact' })),
         safeQuery(supabase.from('history').select('id', { count: 'exact' })),
+        safeQuery(supabase.from('contact_messages').select('id, status', { count: 'exact' })),
       ]);
 
       const profiles = profilesResult.data || [];
       const readers = readersResult.data || [];
+      const messages = messagesResult.data || [];
 
       const newUsersToday = profiles.filter((p: any) => new Date(p.created_at) >= today).length;
       const newUsersWeek = profiles.filter((p: any) => new Date(p.created_at) >= weekAgo).length;
@@ -228,8 +231,8 @@ export const AnalyticsTab = () => {
         totalFavorites: favoritesResult.count || 0,
         totalWatchlist: watchlistResult.count || 0,
         totalHistory: historyResult.count || 0,
-        totalMessages: 0,
-        pendingMessages: 0,
+        totalMessages: messagesResult.count || messages.length,
+        pendingMessages: messages.filter((m: any) => m.status === 'pending').length,
         onlineUsers: activeUsers,
       });
 
@@ -369,9 +372,9 @@ export const AnalyticsTab = () => {
                         <Cell key={`cell-${index}`} fill={entry.color} />
                       ))}
                     </Pie>
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '12px',
                         padding: '12px 16px',
@@ -380,7 +383,7 @@ export const AnalyticsTab = () => {
                       labelStyle={{ color: 'hsl(var(--foreground))', fontWeight: 600 }}
                       itemStyle={{ color: 'hsl(var(--muted-foreground))' }}
                     />
-                    <Legend 
+                    <Legend
                       wrapperStyle={{ paddingTop: '20px' }}
                       formatter={(value) => <span className="text-sm font-medium">{value}</span>}
                     />
@@ -388,7 +391,7 @@ export const AnalyticsTab = () => {
                 </ResponsiveContainer>
               </div>
               <div className="space-y-3">
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   className="flex items-center gap-3 p-4 rounded-xl bg-gradient-to-r from-blue-500/10 to-cyan-500/10 border border-blue-500/20"
@@ -402,7 +405,7 @@ export const AnalyticsTab = () => {
                     {Math.round((analytics.movieSources / Math.max(analytics.totalMedia, 1)) * 100)}%
                   </Badge>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 }}
@@ -417,7 +420,7 @@ export const AnalyticsTab = () => {
                     {Math.round((analytics.tvSources / Math.max(analytics.totalMedia, 1)) * 100)}%
                   </Badge>
                 </motion.div>
-                <motion.div 
+                <motion.div
                   initial={{ opacity: 0, x: 20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.2 }}
@@ -442,7 +445,7 @@ export const AnalyticsTab = () => {
               </h4>
               <div className="h-[180px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart 
+                  <BarChart
                     data={[
                       { name: 'Favoris', value: analytics.totalFavorites, fill: '#ef4444' },
                       { name: 'Watchlist', value: analytics.totalWatchlist, fill: '#8b5cf6' },
@@ -453,9 +456,9 @@ export const AnalyticsTab = () => {
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                     <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
                     <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" width={80} />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'hsl(var(--card))',
                         border: '1px solid hsl(var(--border))',
                         borderRadius: '8px'
                       }}

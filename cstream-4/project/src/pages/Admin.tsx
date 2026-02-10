@@ -1572,9 +1572,7 @@ const Admin = () => {
   const [bulkImportMediaType, setBulkImportMediaType] = useState<'tv' | 'anime'>('tv');
 
   const [dualLangDialogOpen, setDualLangDialogOpen] = useState(false);
-  const [dualLangVostfrData, setDualLangVostfrData] = useState('');
-  const [dualLangVfData, setDualLangVfData] = useState('');
-  const [dualLangThirdData, setDualLangThirdData] = useState('');
+  const [dualLangInputs, setDualLangInputs] = useState<Array<{ langCode: string; data: string }>>([]);
   const [dualLangLabel, setDualLangLabel] = useState('');
   const [dualLangSeason, setDualLangSeason] = useState('1');
   const [dualLangTmdbId, setDualLangTmdbId] = useState<number | null>(null);
@@ -1583,10 +1581,6 @@ const Admin = () => {
   const [dualLangProgress, setDualLangProgress] = useState({ current: 0, total: 0 });
   const [dualLangMediaType, setDualLangMediaType] = useState<'tv' | 'anime'>('tv');
   const [dualLangSeasons, setDualLangSeasons] = useState<TMDBSeason[]>([]);
-  const [dualLangFirstLang, setDualLangFirstLang] = useState('VF2');
-  const [dualLangSecondLang, setDualLangSecondLang] = useState('VOSTFR');
-  const [dualLangThirdLang, setDualLangThirdLang] = useState('');
-  const [showThirdLanguage, setShowThirdLanguage] = useState(false);
 
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false);
   const [bulkDeleteProgress, setBulkDeleteProgress] = useState({ current: 0, total: 0, failed: 0 });
@@ -1888,8 +1882,10 @@ const Admin = () => {
     const seriesReaders = readers.filter((r) => r.media_type === 'series' || r.media_type === 'tv').length;
     const animeReaders = readers.filter((r) => r.media_type === 'anime').length;
 
-    const frenchReaders = readers.filter((r) => r.language?.toLowerCase().includes('fr') || r.language?.toLowerCase().includes('vf')).length;
-    const englishReaders = readers.filter((r) => r.language?.toLowerCase().includes('en') || r.language?.toLowerCase().includes('vostfr')).length;
+    const languageStats = customLanguages.map(lang => {
+      const count = readers.filter(r => r.language?.toLowerCase() === lang.code.toLowerCase()).length;
+      return { ...lang, count };
+    });
 
     const totalMessages = contactMessages.length;
     const pendingMessages = contactMessages.filter((m) => m.status === 'pending').length;
@@ -1898,8 +1894,9 @@ const Admin = () => {
     return {
       totalReaders, readersEnabled, readersDisabled, readersWithTmdb, readersWithoutTmdb,
       totalUsers, adminUsers, onlineUsers,
-      movieReaders, seriesReaders, animeReaders, frenchReaders, englishReaders,
-      totalMessages, pendingMessages, readMessages
+      movieReaders, seriesReaders, animeReaders,
+      totalMessages, pendingMessages, readMessages,
+      languageStats
     };
   }, [readers, users, contactMessages]);
 
@@ -3262,8 +3259,11 @@ const Admin = () => {
   };
 
   const openDualLanguageImportDialog = () => {
-    setDualLangVostfrData('');
-    setDualLangVfData('');
+    // Initialiser avec les 2 premières langues personnalisées ou vide
+    const initialInputs = customLanguages.slice(0, 2).map(l => ({ langCode: l.code, data: '' }));
+    if (initialInputs.length === 0) initialInputs.push({ langCode: 'VOSTFR', data: '' });
+
+    setDualLangInputs(initialInputs);
     setDualLangLabel('');
     setDualLangSeason('1');
     setDualLangTmdbId(null);
@@ -3302,25 +3302,17 @@ const Admin = () => {
       return;
     }
 
-    const firstArrays = parseAllArrays(dualLangVostfrData);
-    const secondArrays = parseAllArrays(dualLangVfData);
-    const thirdArrays = showThirdLanguage ? parseAllArrays(dualLangThirdData) : [];
+    const allImports = dualLangInputs.map(input => ({
+      language: input.langCode,
+      arrays: parseAllArrays(input.data)
+    })).filter(imp => imp.arrays.length > 0 && imp.arrays.some(a => a.urls.length > 0));
 
-    const hasFirst = firstArrays.length > 0 && firstArrays.some(a => a.urls.length > 0);
-    const hasSecond = secondArrays.length > 0 && secondArrays.some(a => a.urls.length > 0);
-    const hasThird = thirdArrays.length > 0 && thirdArrays.some(a => a.urls.length > 0);
-
-    if (!hasFirst && !hasSecond && !hasThird) {
+    if (allImports.length === 0) {
       toast.error('Veuillez fournir au moins une liste d\'URLs');
       return;
     }
 
     const seasonNum = parseInt(dualLangSeason) || 1;
-    const allImports: { language: string; arrays: typeof firstArrays }[] = [];
-
-    if (hasFirst && dualLangFirstLang) allImports.push({ language: dualLangFirstLang, arrays: firstArrays });
-    if (hasSecond && dualLangSecondLang) allImports.push({ language: dualLangSecondLang, arrays: secondArrays });
-    if (hasThird && dualLangThirdLang) allImports.push({ language: dualLangThirdLang, arrays: thirdArrays });
 
     setDualLangImporting(true);
 
@@ -3612,10 +3604,14 @@ const Admin = () => {
         />
         <StatsCard
           title="Langues"
-          value={`${stats.frenchReaders} / ${stats.englishReaders}`}
+          value={stats.languageStats.length}
           icon={<Globe className="w-7 h-7" />}
-          description={`🇫🇷 Français • 🇬🇧 Anglais`}
-          trend={{ label: "Couverture multi", value: Math.round(((stats.frenchReaders + stats.englishReaders) / stats.totalReaders) * 100), color: "bg-cyan-500/20 text-cyan-400" }}
+          description={stats.languageStats.map(l => `${l.code}: ${l.count}`).join(' • ')}
+          trend={{
+            label: "Couverture multi",
+            value: Math.round((stats.languageStats.reduce((sum, l) => sum + l.count, 0) / stats.totalReaders) * 100) || 0,
+            color: "bg-cyan-500/20 text-cyan-400"
+          }}
         />
         <ServiceStatusCard />
       </div>
@@ -6074,18 +6070,18 @@ Le lecteur sera détecté automatiquement depuis l'URL (sibnet, vidomly, etc.)`}
                 <div>
                   <p className="font-semibold text-sm">Import multi-langues</p>
                   <p className="text-xs text-muted-foreground">
-                    Importez 2 ou 3 langues en une seule opération - Lecteur recommandé: Sibnet
+                    Importez plusieurs langues en une seule opération - Lecteur recommandé: Sibnet
                   </p>
                 </div>
               </div>
               <Button
-                variant={showThirdLanguage ? "destructive" : "outline"}
+                variant="outline"
                 size="sm"
-                onClick={() => setShowThirdLanguage(!showThirdLanguage)}
-                className="gap-1"
+                onClick={() => setDualLangInputs([...dualLangInputs, { langCode: customLanguages[0]?.code || 'VOSTFR', data: '' }])}
+                className="gap-1 border-purple-500/50 hover:bg-purple-500/10"
               >
-                {showThirdLanguage ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
-                {showThirdLanguage ? 'Retirer 3ème langue' : 'Ajouter 3ème langue'}
+                <Plus className="w-4 h-4" />
+                Ajouter une langue
               </Button>
             </div>
 
@@ -6248,135 +6244,18 @@ Le lecteur sera détecté automatiquement depuis l'URL (sibnet, vidomly, etc.)`}
               </div>
             </div>
 
-            <div className={`grid gap-4 ${showThirdLanguage ? 'grid-cols-3' : 'grid-cols-2'}`}>
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Select value={dualLangFirstLang} onValueChange={setDualLangFirstLang}>
-                    <SelectTrigger className="w-32 h-8">
-                      <SelectValue placeholder="Langue" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customLanguages.map(lang => (
-                        <SelectItem key={lang.id} value={lang.code}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: lang.color }} />
-                            {lang.code}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-xs text-muted-foreground">URLs des épisodes</span>
-                </div>
-                <textarea
-                  className="w-full min-h-[150px] p-3 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-xs"
-                  placeholder={`var eps = [
-  'https://sibnet.ru/video/ep1',
-  'https://sibnet.ru/video/ep2'
-]`}
-                  value={dualLangVostfrData}
-                  onChange={(e) => {
-                    const newData = e.target.value;
-                    setDualLangVostfrData(newData);
-
-                    if (!dualLangLabel.trim() && newData.trim()) {
-                      const parsedArrays = parseAllArrays(newData);
-                      if (parsedArrays.length > 0 && parsedArrays[0].urls.length > 0) {
-                        const detectedName = extractReaderNameFromUrl(parsedArrays[0].urls[0]);
-                        if (detectedName) {
-                          const seriesName = dualLangTmdb?.name || '';
-                          const autoLabel = seriesName ? `${seriesName} - ${detectedName}` : detectedName;
-                          setDualLangLabel(autoLabel);
-                        }
-                      }
-                    }
-                  }}
-                />
-                {dualLangVostfrData && (() => {
-                  const urlCount = parseEpisodeUrls(dualLangVostfrData).length;
-                  const firstUrl = parseEpisodeUrls(dualLangVostfrData)[0];
-                  const detectedHost = firstUrl ? detectHost(firstUrl) : null;
-                  return (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={urlCount > 0 ? 'default' : 'destructive'} style={{ backgroundColor: customLanguages.find(l => l.code === dualLangFirstLang)?.color }}>
-                        {urlCount} URLs {dualLangFirstLang}
-                      </Badge>
-                      {detectedHost && (
-                        <Badge variant="outline" className="text-xs" style={{ borderColor: detectedHost.color, color: detectedHost.color }}>
-                          {detectedHost.displayName}
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              <div className="space-y-2">
-                <div className="flex items-center gap-2 mb-2">
-                  <Select value={dualLangSecondLang} onValueChange={setDualLangSecondLang}>
-                    <SelectTrigger className="w-32 h-8">
-                      <SelectValue placeholder="Langue" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {customLanguages.map(lang => (
-                        <SelectItem key={lang.id} value={lang.code}>
-                          <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 rounded-full" style={{ backgroundColor: lang.color }} />
-                            {lang.code}
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <span className="text-xs text-muted-foreground">URLs des épisodes</span>
-                </div>
-                <textarea
-                  className="w-full min-h-[150px] p-3 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-orange-500 font-mono text-xs"
-                  placeholder={`var eps = [
-  'https://sibnet.ru/video/ep1-vf',
-  'https://sibnet.ru/video/ep2-vf'
-]`}
-                  value={dualLangVfData}
-                  onChange={(e) => {
-                    const newData = e.target.value;
-                    setDualLangVfData(newData);
-
-                    if (!dualLangLabel.trim() && newData.trim() && !dualLangVostfrData.trim()) {
-                      const parsedArrays = parseAllArrays(newData);
-                      if (parsedArrays.length > 0 && parsedArrays[0].urls.length > 0) {
-                        const detectedName = extractReaderNameFromUrl(parsedArrays[0].urls[0]);
-                        if (detectedName) {
-                          const seriesName = dualLangTmdb?.name || '';
-                          const autoLabel = seriesName ? `${seriesName} - ${detectedName}` : detectedName;
-                          setDualLangLabel(autoLabel);
-                        }
-                      }
-                    }
-                  }}
-                />
-                {dualLangVfData && (() => {
-                  const urlCount = parseEpisodeUrls(dualLangVfData).length;
-                  const firstUrl = parseEpisodeUrls(dualLangVfData)[0];
-                  const detectedHost = firstUrl ? detectHost(firstUrl) : null;
-                  return (
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <Badge variant={urlCount > 0 ? 'default' : 'destructive'} style={{ backgroundColor: customLanguages.find(l => l.code === dualLangSecondLang)?.color }}>
-                        {urlCount} URLs {dualLangSecondLang}
-                      </Badge>
-                      {detectedHost && (
-                        <Badge variant="outline" className="text-xs" style={{ borderColor: detectedHost.color, color: detectedHost.color }}>
-                          {detectedHost.displayName}
-                        </Badge>
-                      )}
-                    </div>
-                  );
-                })()}
-              </div>
-
-              {showThirdLanguage && (
-                <div className="space-y-2">
+            <div className={`grid gap-4 ${dualLangInputs.length > 2 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              {dualLangInputs.map((input, idx) => (
+                <div key={idx} className="space-y-2 relative group">
                   <div className="flex items-center gap-2 mb-2">
-                    <Select value={dualLangThirdLang} onValueChange={setDualLangThirdLang}>
+                    <Select
+                      value={input.langCode}
+                      onValueChange={(v) => {
+                        const next = [...dualLangInputs];
+                        next[idx].langCode = v;
+                        setDualLangInputs(next);
+                      }}
+                    >
                       <SelectTrigger className="w-32 h-8">
                         <SelectValue placeholder="Langue" />
                       </SelectTrigger>
@@ -6392,24 +6271,49 @@ Le lecteur sera détecté automatiquement depuis l'URL (sibnet, vidomly, etc.)`}
                       </SelectContent>
                     </Select>
                     <span className="text-xs text-muted-foreground">URLs des épisodes</span>
+                    {dualLangInputs.length > 1 && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 ml-auto opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => setDualLangInputs(dualLangInputs.filter((_, i) => i !== idx))}
+                      >
+                        <X className="w-3 h-3" />
+                      </Button>
+                    )}
                   </div>
                   <textarea
-                    className="w-full min-h-[150px] p-3 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-green-500 font-mono text-xs"
-                    placeholder={`var eps = [
-  'https://sibnet.ru/video/ep1',
-  'https://sibnet.ru/video/ep2'
-]`}
-                    value={dualLangThirdData}
-                    onChange={(e) => setDualLangThirdData(e.target.value)}
+                    className="w-full min-h-[150px] p-3 rounded-md border bg-background resize-none focus:outline-none focus:ring-2 focus:ring-primary font-mono text-xs"
+                    placeholder={`var eps = [\n  'https://sibnet.ru/video/ep1',\n  'https://sibnet.ru/video/ep2'\n]`}
+                    value={input.data}
+                    onChange={(e) => {
+                      const next = [...dualLangInputs];
+                      const newData = e.target.value;
+                      next[idx].data = newData;
+                      setDualLangInputs(next);
+
+                      if (!dualLangLabel.trim() && newData.trim()) {
+                        const parsedArrays = parseAllArrays(newData);
+                        if (parsedArrays.length > 0 && parsedArrays[0].urls.length > 0) {
+                          const detectedName = extractReaderNameFromUrl(parsedArrays[0].urls[0]);
+                          if (detectedName) {
+                            const seriesName = dualLangTmdb?.name || '';
+                            const autoLabel = seriesName ? `${seriesName} - ${detectedName}` : detectedName;
+                            setDualLangLabel(autoLabel);
+                          }
+                        }
+                      }
+                    }}
                   />
-                  {dualLangThirdData && (() => {
-                    const urlCount = parseEpisodeUrls(dualLangThirdData).length;
-                    const firstUrl = parseEpisodeUrls(dualLangThirdData)[0];
+                  {input.data && (() => {
+                    const urlCount = parseEpisodeUrls(input.data).length;
+                    const firstUrl = parseEpisodeUrls(input.data)[0];
                     const detectedHost = firstUrl ? detectHost(firstUrl) : null;
+                    const langInfo = customLanguages.find(l => l.code === input.langCode);
                     return (
                       <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={urlCount > 0 ? 'default' : 'destructive'} style={{ backgroundColor: customLanguages.find(l => l.code === dualLangThirdLang)?.color }}>
-                          {urlCount} URLs {dualLangThirdLang || '3ème'}
+                        <Badge variant={urlCount > 0 ? 'default' : 'destructive'} style={{ backgroundColor: langInfo?.color }}>
+                          {urlCount} URLs {input.langCode}
                         </Badge>
                         {detectedHost && (
                           <Badge variant="outline" className="text-xs" style={{ borderColor: detectedHost.color, color: detectedHost.color }}>
@@ -6420,7 +6324,7 @@ Le lecteur sera détecté automatiquement depuis l'URL (sibnet, vidomly, etc.)`}
                     );
                   })()}
                 </div>
-              )}
+              ))}
             </div>
 
             {(() => {
@@ -6432,64 +6336,26 @@ Le lecteur sera détecté automatiquement depuis l'URL (sibnet, vidomly, etc.)`}
                 hosts: Array<{ name: string; displayName: string; color: string }>;
               }> = [];
 
-              const firstLangUrls = parseEpisodeUrls(dualLangVostfrData);
-              if (firstLangUrls.length > 0) {
-                const firstLangInfo = customLanguages.find(l => l.code === dualLangFirstLang);
-                const hosts = new Map<string, { displayName: string; color: string }>();
-                firstLangUrls.forEach(url => {
-                  const host = detectHost(url);
-                  if (host && !hosts.has(host.name)) {
-                    hosts.set(host.name, { displayName: host.displayName, color: host.color });
-                  }
-                });
-                languagesWithData.push({
-                  code: dualLangFirstLang,
-                  label: firstLangInfo?.label || dualLangFirstLang,
-                  color: firstLangInfo?.color || '#3B82F6',
-                  urls: firstLangUrls,
-                  hosts: Array.from(hosts.entries()).map(([name, info]) => ({ name, ...info })),
-                });
-              }
-
-              const secondLangUrls = parseEpisodeUrls(dualLangVfData);
-              if (secondLangUrls.length > 0) {
-                const secondLangInfo = customLanguages.find(l => l.code === dualLangSecondLang);
-                const hosts = new Map<string, { displayName: string; color: string }>();
-                secondLangUrls.forEach(url => {
-                  const host = detectHost(url);
-                  if (host && !hosts.has(host.name)) {
-                    hosts.set(host.name, { displayName: host.displayName, color: host.color });
-                  }
-                });
-                languagesWithData.push({
-                  code: dualLangSecondLang,
-                  label: secondLangInfo?.label || dualLangSecondLang,
-                  color: secondLangInfo?.color || '#F97316',
-                  urls: secondLangUrls,
-                  hosts: Array.from(hosts.entries()).map(([name, info]) => ({ name, ...info })),
-                });
-              }
-
-              if (showThirdLanguage) {
-                const thirdLangUrls = parseEpisodeUrls(dualLangThirdData);
-                if (thirdLangUrls.length > 0) {
-                  const thirdLangInfo = customLanguages.find(l => l.code === dualLangThirdLang);
+              dualLangInputs.forEach(input => {
+                const urls = parseEpisodeUrls(input.data);
+                if (urls.length > 0) {
+                  const langInfo = customLanguages.find(l => l.code === input.langCode);
                   const hosts = new Map<string, { displayName: string; color: string }>();
-                  thirdLangUrls.forEach(url => {
+                  urls.forEach(url => {
                     const host = detectHost(url);
                     if (host && !hosts.has(host.name)) {
                       hosts.set(host.name, { displayName: host.displayName, color: host.color });
                     }
                   });
                   languagesWithData.push({
-                    code: dualLangThirdLang,
-                    label: thirdLangInfo?.label || dualLangThirdLang,
-                    color: thirdLangInfo?.color || '#22C55E',
-                    urls: thirdLangUrls,
+                    code: input.langCode,
+                    label: langInfo?.label || input.langCode,
+                    color: langInfo?.color || '#3B82F6',
+                    urls: urls,
                     hosts: Array.from(hosts.entries()).map(([name, info]) => ({ name, ...info })),
                   });
                 }
-              }
+              });
 
               if (languagesWithData.length === 0) return null;
 
@@ -6596,7 +6462,7 @@ Le lecteur sera détecté automatiquement depuis l'URL (sibnet, vidomly, etc.)`}
               ) : (
                 <>
                   <Globe className="w-4 h-4" />
-                  Importer VOSTFR + VF
+                  Importer les langues ({dualLangInputs.filter(i => i.data.trim()).length})
                 </>
               )}
             </Button>

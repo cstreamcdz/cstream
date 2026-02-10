@@ -4,6 +4,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer as createHttpServer } from "http";
 import compression from "compression";
+import os from "os";
 import CHANNELS_DATABASE from "./src/data/channels.js";
 import { Client, GatewayIntentBits, ActivityType, SlashCommandBuilder, REST, Routes, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } from "discord.js";
 
@@ -938,6 +939,41 @@ Si on te pose une question sur un film/série/anime spécifique, donne des infos
     console.error("Chat API Error:", error);
     res.status(500).json({ response: "Erreur neuronale : " + error.message });
   }
+});
+
+// ============================================
+// ADMIN & SYSTEM ROUTES
+// ============================================
+app.get("/api/admin/system-stats", (req, res) => {
+  try {
+    const mem = process.memoryUsage();
+    const stats = {
+      uptime: process.uptime(),
+      memory: {
+        rss: (mem.rss / 1024 / 1024).toFixed(2) + " MB",
+        heapTotal: (mem.heapTotal / 1024 / 1024).toFixed(2) + " MB",
+        heapUsed: (mem.heapUsed / 1024 / 1024).toFixed(2) + " MB"
+      },
+      system: {
+        platform: os.platform(),
+        nodeVersion: process.version
+      },
+      botRunning: client.isReady(),
+      timestamp: new Date().toISOString()
+    };
+    res.json(stats);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/admin/tickets", (req, res) => {
+  res.json({ tickets: [] });
+});
+
+app.post("/api/cookie-consent", express.json(), (req, res) => {
+  console.log("🍪 Cookie consent received:", req.body);
+  res.json({ success: true, message: "Consent saved" });
 });
 
 async function startServer() {

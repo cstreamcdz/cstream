@@ -242,7 +242,7 @@ export const Navbar = () => {
                   <motion.div
                     whileHover={animations.logo.hover}
                     whileTap={animations.logo.tap}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center overflow-hidden transition-all duration-300 relative group"
+                    className="w-10 h-10 rounded-xl flex items-center justify-center overflow-hidden transition-all duration-300 relative group"
                   >
                     <div
                       className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
@@ -262,7 +262,7 @@ export const Navbar = () => {
                     <motion.img
                       src={logoUrl}
                       alt="CStream"
-                      className="w-full h-full object-contain p-1.5 drop-shadow-2xl filter brightness-130 relative z-10 transition-all duration-300 group-hover:drop-shadow-[0_0_16px_rgb(var(--color-primary)/0.9)]"
+                      className="w-full h-full object-contain p-1 drop-shadow-2xl filter brightness-110 relative z-10 transition-all duration-300 group-hover:drop-shadow-[0_0_16px_rgba(var(--theme-primary-rgb),0.6)]"
                     />
                   </motion.div>
                   <div className="hidden sm:flex flex-col justify-center">

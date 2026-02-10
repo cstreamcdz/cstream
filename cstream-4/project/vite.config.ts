@@ -48,34 +48,16 @@ export default defineConfig(({ mode }) => ({
         assetFileNames: 'assets/[name]-[hash].[ext]',
         manualChunks: (id) => {
           if (id.includes('node_modules')) {
-            // React core - explicit paths to avoid catching @emotion/react etc.
-            if (id.includes('/node_modules/react/') || 
-                id.includes('/node_modules/react-dom/') || 
-                id.includes('/node_modules/react-router') ||
-                id.includes('/node_modules/scheduler/')) {
-              return 'vendor-react';
+            // Group heavy foundational libraries together
+            if (id.includes('react') || id.includes('react-dom') || id.includes('react-router')) {
+              return 'vendor-core';
             }
-            // UI component libraries
-            if (id.includes('/node_modules/@radix-ui/') || 
-                id.includes('/node_modules/lucide-react/')) {
+            // Group UI/Utility libs
+            if (id.includes('@radix-ui') || id.includes('lucide-react') || id.includes('framer-motion')) {
               return 'vendor-ui';
             }
-            // Framer motion is often large
-            if (id.includes('/node_modules/framer-motion/')) {
-              return 'vendor-framer';
-            }
-            // Query & state management
-            if (id.includes('/node_modules/@tanstack/') || 
-                id.includes('/node_modules/zustand/')) {
-              return 'vendor-state';
-            }
-            // Charts - often large, cache separately
-            if (id.includes('/node_modules/recharts/') || 
-                id.includes('/node_modules/d3')) {
-              return 'vendor-charts';
-            }
+            // Let everything else (including Recharts) be handled by Vite's auto-splitting
           }
-          // Don't group all remaining node_modules - let Vite split naturally
         },
       },
     },

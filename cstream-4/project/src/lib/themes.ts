@@ -95,6 +95,38 @@ export const THEMES: Theme[] = [
       bgGradient: 'linear-gradient(135deg, #050000 0%, #7F1D1D 100%)',
       accent: '#F87171',
     },
+  },
+  {
+    id: 'premium-verified',
+    name: 'Verified Elite',
+    label: 'Vérifié',
+    isDark: true,
+    description: 'Design exclusif pour membres vérifiés',
+    colors: {
+      primary: '#00F2FF',
+      background: '#010409',
+      text: '#F0F6FC',
+      cardBg: 'rgba(0, 242, 255, 0.03)',
+      borderColor: 'rgba(0, 242, 255, 0.15)',
+      bgGradient: 'linear-gradient(135deg, #010409 0%, #0D1117 100%)',
+      accent: '#7C3AED',
+    },
+  },
+  {
+    id: 'light-violet',
+    name: 'Violet Clair',
+    label: 'Lumière',
+    isDark: false,
+    description: 'Clarté violette élégante',
+    colors: {
+      primary: '#7C3AED',
+      background: '#F8F7FF',
+      text: '#1E1B4B',
+      cardBg: 'rgba(124, 58, 237, 0.04)',
+      borderColor: 'rgba(124, 58, 237, 0.1)',
+      bgGradient: 'linear-gradient(135deg, #F8F7FF 0%, #F1F0FB 100%)',
+      accent: '#C084FC',
+    },
   }
 ];
 
@@ -109,15 +141,17 @@ export const applyTheme = (themeId: string) => {
   if (!theme) return;
 
   const root = document.documentElement;
-  
+
   // Set core theme variables
   root.style.setProperty('--primary-hex', theme.colors.primary);
   root.style.setProperty('--background-hex', theme.colors.background);
-  root.style.setProperty('--text-color', theme.colors.text || '#f5f5f5');
-  root.style.setProperty('--card-bg', theme.colors.cardBg || 'rgba(255, 255, 255, 0.02)');
-  root.style.setProperty('--border-color', theme.colors.borderColor || 'rgba(255, 255, 255, 0.08)');
-  root.style.setProperty('--bg-gradient', theme.colors.bgGradient || `linear-gradient(135deg, ${theme.colors.background}, #1a1a2e)`);
+  root.style.setProperty('--text-color', theme.colors.text || (theme.isDark ? '#f5f5f5' : '#1a1a1a'));
+  root.style.setProperty('--card-bg', theme.colors.cardBg || (theme.isDark ? 'rgba(255, 255, 255, 0.02)' : 'rgba(0, 0, 0, 0.02)'));
+  root.style.setProperty('--border-color', theme.colors.borderColor || (theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'));
+  root.style.setProperty('--bg-gradient', theme.colors.bgGradient || `linear-gradient(135deg, ${theme.colors.background}, ${theme.isDark ? '#1a1a2e' : '#ffffff'})`);
   root.style.setProperty('--accent-color', theme.colors.accent || theme.colors.primary);
+  root.style.setProperty('--theme-text', theme.colors.text || (theme.isDark ? '#f5f5f5' : '#1a1a1a'));
+  root.style.setProperty('--theme-border', theme.colors.borderColor || (theme.isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'));
 
   // Sync Shadcn HSL variables
   const primaryRgb = hexToRgb(theme.colors.primary);
@@ -132,12 +166,30 @@ export const applyTheme = (themeId: string) => {
   if (bgRgb) {
     const h = rgbToHsl(bgRgb.r, bgRgb.g, bgRgb.b);
     root.style.setProperty('--background', `${h.h} ${h.s}% ${h.l}%`);
-    const cardL = Math.max(h.l + 3, 7);
-    root.style.setProperty('--card', `${h.h} ${h.s}% ${cardL}%`);
-    root.style.setProperty('--popover', `${h.h} ${h.s}% ${cardL}%`);
-    root.style.setProperty('--muted', `${h.h} ${h.s}% ${Math.max(h.l + 5, 12)}%`);
-    root.style.setProperty('--secondary', `${h.h} ${h.s}% ${Math.max(h.l + 4, 10)}%`);
-    root.style.setProperty('--border', `${h.h} ${h.s}% ${Math.max(h.l + 6, 15)}%`);
+
+    if (theme.isDark) {
+      const cardL = Math.max(h.l + 3, 7);
+      root.style.setProperty('--card', `${h.h} ${h.s}% ${cardL}%`);
+      root.style.setProperty('--popover', `${h.h} ${h.s}% ${cardL}%`);
+      root.style.setProperty('--muted', `${h.h} ${h.s}% ${Math.max(h.l + 5, 12)}%`);
+      root.style.setProperty('--secondary', `${h.h} ${h.s}% ${Math.max(h.l + 4, 10)}%`);
+      root.style.setProperty('--border', `${h.h} ${h.s}% ${Math.max(h.l + 6, 15)}%`);
+      root.style.setProperty('--foreground', '0 0% 98%');
+      root.style.setProperty('--card-foreground', '0 0% 98%');
+      root.style.setProperty('--popover-foreground', '0 0% 98%');
+      root.style.setProperty('--muted-foreground', '240 5% 70%');
+    } else {
+      const cardL = Math.max(h.l - 5, 95);
+      root.style.setProperty('--card', `${h.h} ${h.s}% ${cardL}%`);
+      root.style.setProperty('--popover', `${h.h} ${h.s}% ${cardL}%`);
+      root.style.setProperty('--muted', `${h.h} ${h.s}% ${Math.max(h.l - 8, 90)}%`);
+      root.style.setProperty('--secondary', `${h.h} ${h.s}% ${Math.max(h.l - 6, 92)}%`);
+      root.style.setProperty('--border', `${h.h} ${h.s}% ${Math.max(h.l - 10, 85)}%`);
+      root.style.setProperty('--foreground', '240 10% 4%');
+      root.style.setProperty('--card-foreground', '240 10% 4%');
+      root.style.setProperty('--popover-foreground', '240 10% 4%');
+      root.style.setProperty('--muted-foreground', '240 3.8% 46.1%');
+    }
   }
 
   localStorage.setItem('cstream_active_theme', theme.id);

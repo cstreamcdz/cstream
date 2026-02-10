@@ -68,13 +68,20 @@ export interface ParsedArray {
 export interface AdminStats {
   totalReaders: number;
   readersEnabled: number;
+  readersDisabled: number;
   readersWithTmdb: number;
+  readersWithoutTmdb: number;
   totalUsers: number;
   adminUsers: number;
+  onlineUsers: number;
   movieReaders: number;
   seriesReaders: number;
+  animeReaders: number;
+  frenchReaders: number;
+  englishReaders: number;
   totalMessages: number;
   pendingMessages: number;
+  readMessages: number;
 }
 
 export interface GroupedReader {

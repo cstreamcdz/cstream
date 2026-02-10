@@ -8,6 +8,7 @@ import { fileURLToPath } from "url";
 import { createServer as createHttpServer } from "http";
 import compression from "compression";
 import csv from "csv-parser";
+import os from "os";
 import CHANNELS_DATABASE from "./src/data/channels.js";
 
 // ============================================
@@ -737,113 +738,127 @@ app.get("/api/images/proxy", async (req, res) => {
     res.send(Buffer.from(buffer));
   } catch (error) {
     console.error("⚠️ Proxy error:", error);
+  }
+});
+
+// ============================================
+// ADMIN & SYSTEM ROUTES
+// ============================================
+app.get("/api/admin/system-stats", (req, res) => {
+  try {
+    const mem = process.memoryUsage();
+    const stats = {
+      uptime: process.uptime(),
+      memory: {
+        rss: (mem.rss / 1024 / 1024).toFixed(2) + " MB",
+        heapTotal: (mem.heapTotal / 1024 / 1024).toFixed(2) + " MB",
+        heapUsed: (mem.heapUsed / 1024 / 1024).toFixed(2) + " MB"
+      },
+      system: {
+        platform: os.platform(),
+        nodeVersion: process.version
+      },
+      botRunning: true, // Assume running if server is up
+      timestamp: new Date().toISOString()
+    };
+    res.json(stats);
+  } catch (error) {
     res.status(500).json({ error: error.message });
   }
-  // ============================================
-  // ADMIN & SYSTEM ROUTES
-  // ============================================
-  app.get("/api/admin/system-stats", (req, res) => {
-    try {
-      const os = require('os');
-      const stats = {
-        uptime: process.uptime(),
-        memory: process.memoryUsage(),
-        platform: os.platform(),
-        release: os.release(),
-        nodeVersion: process.version,
-        cpuLoad: os.loadavg(),
-        totalMem: os.totalmem(),
-        freeMem: os.freemem(),
-        botStatus: "Online"
-      };
-      res.json(stats);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  });
+});
 
-  app.get("/api/admin/tickets", (req, res) => {
-    res.json([]);
-  });
+app.get("/api/admin/tickets", (req, res) => {
+  res.json({ tickets: [] });
+});
 
-  app.post("/api/cookie-consent", express.json(), (req, res) => {
-    console.log("🍪 Cookie consent received:", req.body);
-    res.json({ success: true, message: "Consent saved" });
-  });
+app.post("/api/cookie-consent", express.json(), (req, res) => {
+  console.log("🍪 Cookie consent received:", req.body);
+  res.json({ success: true, message: "Consent saved" });
+});
 
-  // ============================================
-  // SERVEUR & VITE DEV
-  // ============================================
-  async function startServer() {
-    const httpServer = createHttpServer(app);
+app.post('/api/analytics/visit', express.json(), async (req, res) => {
+  try {
+    const { visitorId, platform, language, username } = req.body;
+    console.log(`[Analytics] New visit from ${visitorId} (${platform}, ${language})`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-    // Check if we are in the 'project' subdirectory or the root
-    const projectPath = fs.existsSync(path.resolve(__dirname, "project"))
-      ? path.resolve(__dirname, "project")
-      : __dirname;
+// ============================================
+// SERVEUR & VITE DEV
+// ============================================
+async function startServer() {
+  const httpServer = createHttpServer(app);
 
-    const distPath = path.join(projectPath, "dist");
+  // Check if we are in the 'project' subdirectory or the root
+  const projectPath = fs.existsSync(path.resolve(__dirname, "project"))
+    ? path.resolve(__dirname, "project")
+    : __dirname;
 
-    if (isDev) {
-      const { createServer: createViteServer } = await import("vite");
-      const vite = await createViteServer({
-        server: {
-          middlewareMode: true,
-          hmr: false,
-          allowedHosts: true
-        },
-        appType: "spa",
-        root: projectPath
-      });
-      app.use(vite.middlewares);
-      app.use("*", async (req, res) => {
-        try {
-          let template = fs.readFileSync(path.resolve(projectPath, "index.html"), "utf-8");
-          template = await vite.transformIndexHtml(req.originalUrl, template);
-          res.status(200).set({ "Content-Type": "text/html" }).end(template);
-        } catch (e) {
-          console.error("Vite middleware error:", e);
-          res.status(500).end(e.stack);
+  const distPath = path.join(projectPath, "dist");
+
+  if (isDev) {
+    const { createServer: createViteServer } = await import("vite");
+    const vite = await createViteServer({
+      server: {
+        middlewareMode: true,
+        hmr: false,
+        allowedHosts: true
+      },
+      appType: "spa",
+      root: projectPath
+    });
+    app.use(vite.middlewares);
+    app.use("*", async (req, res) => {
+      try {
+        let template = fs.readFileSync(path.resolve(projectPath, "index.html"), "utf-8");
+        template = await vite.transformIndexHtml(req.originalUrl, template);
+        res.status(200).set({ "Content-Type": "text/html" }).end(template);
+      } catch (e) {
+        console.error("Vite middleware error:", e);
+        res.status(500).end(e.stack);
+      }
+    });
+  } else {
+    // Production: servir les fichiers statiques
+    if (fs.existsSync(distPath)) {
+      app.use(
+        express.static(distPath, {
+          etag: false,
+          lastModified: false,
+          setHeaders: (res, filePath) => {
+            res.setHeader(
+              "Cache-Control",
+              "no-store, no-cache, must-revalidate, proxy-revalidate",
+            );
+          },
+        }),
+      );
+
+      app.get("*", (req, res) => {
+        if (req.path.startsWith("/api/")) {
+          return res.status(404).json({ error: "API endpoint not found" });
         }
+        res.setHeader(
+          "Cache-Control",
+          "no-store, no-cache, must-revalidate, proxy-revalidate",
+        );
+        res.sendFile(path.resolve(distPath, "index.html"));
       });
     } else {
-      // Production: servir les fichiers statiques
-      if (fs.existsSync(distPath)) {
-        app.use(
-          express.static(distPath, {
-            etag: false,
-            lastModified: false,
-            setHeaders: (res, filePath) => {
-              res.setHeader(
-                "Cache-Control",
-                "no-store, no-cache, must-revalidate, proxy-revalidate",
-              );
-            },
-          }),
-        );
-
-        app.get("*", (req, res) => {
-          if (req.path.startsWith("/api/")) {
-            return res.status(404).json({ error: "API endpoint not found" });
-          }
-          res.setHeader(
-            "Cache-Control",
-            "no-store, no-cache, must-revalidate, proxy-revalidate",
-          );
-          res.sendFile(path.resolve(distPath, "index.html"));
-        });
-      } else {
-        console.error("Dist folder not found at:", distPath);
-        app.get("*", (req, res) => res.status(404).send("Application not built. Please run build first."));
-      }
+      console.error("Dist folder not found at:", distPath);
+      app.get("*", (req, res) => res.status(404).send("Application not built. Please run build first."));
     }
+  }
 
-    const PORT = process.env.PORT || 5000;
-    // Health check endpoint for Replit deployment
-    app.get("/health", (req, res) => res.status(200).send("OK"));
+  const PORT = process.env.PORT || 5000;
+  // Health check endpoint for Replit deployment
+  app.get("/health", (req, res) => res.status(200).send("OK"));
 
-    httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(`
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`
 ╔═══════════════════════════════════════════════════════════╗
 ║  🎬 CStream ULTRA Server v2.0                             ║
 ║  🚀 Mode: ${isDev ? "DEVELOPMENT" : "PRODUCTION".padEnd(42)}║
@@ -852,7 +867,7 @@ app.get("/api/images/proxy", async (req, res) => {
 ║  📺 Custom: ${customChannels.length.toString().padEnd(40)} channels║
 ╚═══════════════════════════════════════════════════════════╝
     `);
-    });
-  }
+  });
+}
 
-  startServer().catch(console.error);
+startServer().catch(console.error);

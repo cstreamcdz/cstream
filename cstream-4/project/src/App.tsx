@@ -136,22 +136,30 @@ const NavigationParticles = () => {
   const particlesEnabled = useSettingsStore((state) => state.particlesEnabled);
   const themeId = useSettingsStore((state) => state.theme);
 
-  const particleColor = useMemo(() => {
+  const particleConfig = useMemo(() => {
     const theme = THEMES.find(t => t.id === themeId) || THEMES.find(t => t.id === 'premium-violet');
-    return theme?.colors.primary || '#A855F7';
+    const isVerified = themeId === 'premium-verified';
+
+    return {
+      color: theme?.colors.primary || '#A855F7',
+      density: isVerified ? 80 : 40,
+      speed: isVerified ? 0.4 : 0.2,
+      minSize: isVerified ? 0.6 : 0.4,
+      maxSize: isVerified ? 1.4 : 1.2
+    };
   }, [themeId]);
 
   if (!particlesEnabled) return null;
 
   return (
-    <div key={particleColor} className="fixed top-0 left-0 right-0 h-20 md:h-24 pointer-events-none overflow-hidden" style={{ zIndex: 50 }}>
+    <div key={`${themeId}-${particleConfig.color}`} className="fixed top-0 left-0 right-0 h-20 md:h-24 pointer-events-none overflow-hidden" style={{ zIndex: 50 }}>
       <SparklesCore
         background="transparent"
-        minSize={0.4}
-        maxSize={1.0}
-        particleDensity={40}
-        speed={0.2}
-        particleColor={particleColor}
+        minSize={particleConfig.minSize}
+        maxSize={particleConfig.maxSize}
+        particleDensity={particleConfig.density}
+        speed={particleConfig.speed}
+        particleColor={particleConfig.color}
         responsiveDensity
       />
     </div>
