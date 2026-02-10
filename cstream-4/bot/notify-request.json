@@ -86,5 +86,16 @@
     },
     "status": "pending",
     "timestamp": "2026-02-10T16:36:00.552Z"
+  },
+  {
+    "channelId": "1454425396303888426",
+    "embed": {
+      "title": "👤 Nouveau Visiteur !",
+      "description": "Un utilisateur a visité le site.\n\n**Utilisateur:** Inconnu\n**Visitor ID:** vvgeued\n**Plateforme:** Win32\n**Langue:** fr",
+      "color": "#10b981",
+      "timestamp": "2026-02-10T18:18:27.449Z"
+    },
+    "status": "pending",
+    "timestamp": "2026-02-10T18:18:27.449Z"
   }
 ]
