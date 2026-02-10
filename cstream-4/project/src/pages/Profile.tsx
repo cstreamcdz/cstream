@@ -816,11 +816,14 @@ const Profile = () => {
                         e.stopPropagation();
                       }}
                     >
-                      <img
-                        src="/animated.gif"
-                        alt="click here"
-                        className="w-full h-auto rounded-xl pointer-events-none"
-                      />
+                      <div className="w-full aspect-[3/1] bg-gradient-to-br from-primary/20 to-purple-600/20 flex flex-col items-center justify-center p-6 text-center group-hover:from-primary/30 group-hover:to-purple-600/30 transition-all">
+                        <span className="text-primary font-black text-xl uppercase tracking-tighter mb-1">
+                          Rejoindre
+                        </span>
+                        <span className="text-white/60 text-[10px] font-bold uppercase tracking-widest group-hover:text-white/80 transition-colors">
+                          Notre Discord
+                        </span>
+                      </div>
                     </a>
                   </div>
                 </div>
